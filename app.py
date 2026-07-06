@@ -6,6 +6,10 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 from typing import Optional
+# --- OFFICIAL MCP CLIENT SESSION CONNECTION ---
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+import asyncio
 
 # Import our deterministic validation engine
 from tools.mcp_schemes import search_schemes
@@ -70,22 +74,49 @@ if st.button("Run Agentic Verification Loop", type="primary"):
         land = profile_data.get("land_size_acres")
         
         if not crop or not land:
-            st.error("🛑 System Halt: Missing vital profile parameters (Crop or Land Size). Agent A requires clarification.")
+            st.error("🛑 System Halt: Missing vital profile parameters. Agent A requires clarification.")
         else:
             st.subheader("📋 Effective Trust Verification Report")
             st.info(f"**Target Evaluation Scope:** {land} Acres of {crop} in Karnataka")
             
-            # Querying local deterministic MCP tool
-            mcp_tool_response = search_schemes(crop_type=crop, land_size_acres=land)
-            mcp_data = json.loads(mcp_tool_response)
-            results = mcp_data.get("results", [])
-            
-            if not results:
-                st.error("❌ Non-eligible: No active regional subsidy matches found for these boundaries.")
-            else:
-                for scheme in results:
-                    with st.container():
-                        st.success(f"**Eligible: {scheme['name']}** (ID: {scheme['id']})")
-                        st.markdown(f"*- Rule Guard:* {scheme['min_land_acres']} <= {land} <= {scheme['max_land_acres']} Acres")
-                        st.markdown(f"*- Allocation Scope:* {scheme['description']}")
-                        st.write("---")
+
+            async def call_mcp_server():
+                # Define how to boot our external MCP server file using python3
+                server_params = StdioServerParameters(
+                    command="python3",
+                    args=["tools/mcp_schemes.py"],
+                    env=os.environ.copy()
+                )
+                
+                # Establish the official Stdio protocol session channel
+                async with stdio_client(server_params) as (read_stream, write_stream):
+                    async with ClientSession(read_stream, write_stream) as session:
+                        # Initialize connection handshake
+                        await session.initialize()
+                        
+                        # Call the tool programmatically through the protocol layer
+                        response = await session.call_tool(
+                            "search_schemes", 
+                            arguments={"crop_type": crop, "land_size_acres": float(land)}
+                        )
+                        return response.content[0].text
+
+            # Execute the async MCP call cleanly inside our synchronous Streamlit app
+            try:
+                with st.spinner("Connecting to official FarmScheme MCP Server..."):
+                    mcp_tool_response = asyncio.run(call_mcp_server())
+                
+                mcp_data = json.loads(mcp_tool_response)
+                results = mcp_data.get("results", [])
+                
+                if not results:
+                    st.error("❌ Non-eligible: No active regional subsidy matches found for these boundaries.")
+                else:
+                    for scheme in results:
+                        with st.container():
+                            st.success(f"**Eligible: {scheme['name']}** (ID: {scheme['id']})")
+                            st.markdown(f"*- Rule Guard:* {scheme['min_land_acres']} <= {land} <= {scheme['max_land_acres']} Acres")
+                            st.markdown(f"*- Allocation Scope:* {scheme['description']}")
+                            st.write("---")
+            except Exception as e:
+                st.error(f"MCP Connection Protocol Error: {e}")
