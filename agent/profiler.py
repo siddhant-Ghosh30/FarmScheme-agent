@@ -1,48 +1,35 @@
 import json
-from typing import Dict, Any
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, Field
+from typing import Optional
+
+class FarmerProfile(BaseModel):
+    state: str = Field(description="Must default to 'Karnataka' for this localized engine setup.")
+    crop_type: Optional[str] = Field(None, description="Standardized crop name in English (e.g., Paddy, Ragi, Sugarcane). Set to null if unknown.")
+    land_size_acres: Optional[float] = Field(None, description="Total farm land explicitly converted and normalized into float Acres. Set to null if unknown.")
 
 class ProfilerAgent:
     """
-    Agent A: Parses conversational data, normalizes parameters into a strict schema,
-    and flags missing data for active elicitation.
+    Agent A: Connects directly to Gemini, processes conversational input, 
+    and returns a strictly verified structured dictionary.
     """
-    def __init__(self):
+    def __init__(self, api_key: str):
+        self.client = genai.Client(api_key=api_key)
         self.system_instruction = """
-        You are Agent A (The Profiler) for FarmScheme. Your job is to extract unstructured conversational 
-        data from farmers in Karnataka and normalize it into a strict JSON format.
-        
-        CRITICAL RULES:
-        1. Convert all land areas explicitly to ACERS. If the input is in hectares, convert it (1 Hectare = 2.47 Acres).
-        2. Normalize crop names to standard English (e.g., 'Batta' or 'Paddy' -> Paddy, 'Ragi' -> Ragi).
-        3. If 'land_size_acres' or 'crop_type' cannot be confidently extracted, set them to null.
+        You are Agent A (The Profiler) for the FarmScheme Capstone. Isolate metrics into a clean JSON layout.
+        Rules: Convert all land to ACRES (40 Gunthas = 1 Acre, 1 Hectare = 2.47 Acres). Normalize crop names to English (e.g., 'Batta' -> Paddy).
         """
 
-    def process_input(self, farmer_transcript: str) -> Dict[str, Any]:
-        # In production, this runs via client.aio.models.generate_content with structural JSON schema
-        # Simulating the LLM extraction logic here for prototyping:
-        print("[Agent A] Normalizing farmer conversational profile...")
-        
-        # Simple heuristic simulation for demonstration
-        text = farmer_transcript.lower()
-        
-        # Extrapolate crop
-        crop = "Unknown"
-        if "paddy" in text or "batta" in text:
-            crop = "Paddy"
-        elif "ragi" in text:
-            crop = "Ragi"
-        elif "sugarcane" in text:
-            crop = "Sugarcane"
-            
-        # Extrapolate acres
-        acres = None
-        import re
-        match = re.search(r'(\d+(\.\d+)?)\s*acre', text)
-        if match:
-            acres = float(match.group(1))
-            
-        return {
-            "state": "Karnataka",
-            "crop_type": crop if crop != "Unknown" else None,
-            "land_size_acres": acres
-        }
+    def process_transcript(self, transcript: str) -> dict:
+        response = self.client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=f"Farmer Transcript: \"{transcript}\"",
+            config=types.GenerateContentConfig(
+                system_instruction=self.system_instruction,
+                response_mime_type="application/json",
+                response_schema=FarmerProfile,
+                temperature=0.1
+            ),
+        )
+        return json.loads(response.text)

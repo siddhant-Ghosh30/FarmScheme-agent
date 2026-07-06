@@ -1,46 +1,38 @@
+import os
 import json
-from typing import Dict, Any
-from tools.mcp_schemes import search_schemes
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 class MatcherAgent:
     """
-    Agent B: Consumes structured JSON, orchestrates deterministic MCP tool usage,
-    and prints an auditable compliance/evaluation chain. No hallucinations allowed.
+    Agent B: Sets up the secure background environment context, 
+    spawns the MCP connection loop, and runs the rule verification.
     """
-    def __init__(self):
-        self.system_instruction = """
-        You are Agent B (The Matcher). You take structured profile JSON data and evaluate 
-        eligibility against fetched database schemes. You must provide a highly structured,
-        transparent evaluation chain showing why a farmer qualifies or fails.
-        """
+    def __init__(self, api_key: str):
+        self.api_key = api_key
 
-    def evaluate_profile(self, structured_profile: Dict[str, Any]) -> str:
-        crop = structured_profile.get("crop_type")
-        land = structured_profile.get("land_size_acres")
+    async def _execute_mcp_query(self, crop: str, land: float) -> str:
+        # Securely pass down the credential layer to the tools environment context
+        env_context = os.environ.copy()
+        env_context["GEMINI_API_KEY"] = self.api_key
+
+        server_params = StdioServerParameters(
+            command="python3",
+            args=["tools/mcp_schemes.py"],
+            env=env_context
+        )
         
-        if not crop or not land:
-            return "Execution Halted: Missing essential profile metrics. Agent A needs to re-engage with the user."
-            
-        print(f"[Agent B] Executing MCP search_schemes tool for Crop: {crop}, Land: {land} Acres...")
-        
-        # Deterministic Tool Call
-        tool_response_raw = search_schemes(crop_type=crop, land_size_acres=land)
-        tool_data = json.loads(tool_response_raw)
-        
-        results = tool_data.get("results", [])
-        
-        output = []
-        output.append("=== EFFECTIVE TRUST VERIFICATION CHAIN ===")
-        output.append(f"Input Data Evaluated: State=Karnataka | Crop={crop} | Land Size={land} Acres")
-        output.append(f"Total Matches Found from Active Registry: {len(results)}\n")
-        
-        if not results:
-            output.append("❌ Result: No matching state subsidies found for these exact parameters.")
-        else:
-            for scheme in results:
-                output.append(f"✅ Eligible for: {scheme['name']} (ID: {scheme['id']})")
-                output.append(f"   ↳ Criteria Met: {scheme['min_land_acres']} <= {land} <= {scheme['max_land_acres']} Acres")
-                output.append(f"   ↳ Description: {scheme['description']}\n")
-                
-        output.append("==========================================")
-        return "\n".join(output)
+        async with stdio_client(server_params) as (read_stream, write_stream):
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+                response = await session.call_tool(
+                    "search_schemes", 
+                    arguments={"crop_type": crop, "land_size_acres": float(land)}
+                )
+                return response.content[0].text
+
+    def evaluate_profile(self, crop: str, land: float) -> dict:
+        # Run the async server query within a synchronous call for the UI
+        raw_response = asyncio.run(self._execute_mcp_query(crop, land))
+        return json.loads(raw_response)
