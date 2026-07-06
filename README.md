@@ -3,7 +3,7 @@
 
 - **Live Application Link:** https://farmscheme-agent.streamlit.app
 - **Public GitHub Repository:** https://github.com/siddhant-Ghosh30/FarmScheme-agent
-- **Video Walkthrough Demo:** [Paste your YouTube video link here]
+- **Video Walkthrough Demo:** https://youtu.be/gPAyG6taL8o
 
 ---
 
