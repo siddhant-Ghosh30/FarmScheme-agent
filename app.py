@@ -39,12 +39,11 @@ user_input = st.text_area(
 )
 
 if st.button("Run Agentic Verification Loop", type="primary"):
-    if not user_input.strip():
-        st.warning("Please provide a description first.")
-    elif not os.environ.get("GEMINI_API_KEY"):
-        st.error("Missing GEMINI_API_KEY environment variable. Set it in your terminal environment.")
+    if "GEMINI_API_KEY" not in st.secrets:
+        st.error("🛑 Secret Key Missing: Please ensure GEMINI_API_KEY is configured inside `.streamlit/secrets.toml`")
     else:
-        client = genai.Client()
+        # Explicitly pass the token directly out of st.secrets into the client instantiation 
+        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
         
         # --- AGENT A RUNNING ---
         with st.status("🤖 Agent A (Profiler) is translating conversational tokens...", expanded=True) as status:
@@ -54,7 +53,7 @@ if st.button("Run Agentic Verification Loop", type="primary"):
             """
             
             response_a = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.1-flash-lite',
                 contents=f"Farmer Transcript: \"{user_input}\"",
                 config=types.GenerateContentConfig(
                     system_instruction=profiler_instruction,
@@ -82,11 +81,16 @@ if st.button("Run Agentic Verification Loop", type="primary"):
 
             async def call_mcp_server():
                 # Define how to boot our external MCP server file using python3
+                env_context = os.environ.copy() # This creates a "snapshot" of the environment your computer is currently running in
+                env_context["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"] #This is the "hand-off." We take your API key from your secure Streamlit settings and manually inject it into that environment snapshot.
+
                 server_params = StdioServerParameters(
                     command="python3",
                     args=["tools/mcp_schemes.py"],
-                    env=os.environ.copy()
+                    env=env_context
                 )
+                # env=env_context: When you start this room, give it this specific environment package."
+                # By passing the env_context here, the MCP server process starts up already knowing the GEMINI_API_KEY as an environment variable.
                 
                 # Establish the official Stdio protocol session channel
                 async with stdio_client(server_params) as (read_stream, write_stream):
