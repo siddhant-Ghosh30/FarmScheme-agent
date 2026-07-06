@@ -10,11 +10,7 @@ st.title("🧑‍🌾 FarmScheme: Democratizing Farm Welfare Access")
 st.caption("Google x Kaggle Capstone (Track 1: Agents for Good)")
 st.write("---")
 
-st.subheader("👨‍🌾 Farmer Conversational Input")
-user_input = st.text_area(
-    "Describe your farm scenario below:",
-    placeholder="e.g., Namaste, I am farming near Mandya. I have about 120 Gunthas of land left this cycle and I am putting down Paddy (Batta)."
-)
+user_input = st.text_area("Describe your farm scenario below:")
 
 if st.button("Run Agentic Verification Loop", type="primary"):
     if not user_input.strip():
