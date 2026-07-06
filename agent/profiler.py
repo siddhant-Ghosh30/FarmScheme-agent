@@ -8,7 +8,7 @@ class ProfilerAgent:
     """
     def __init__(self):
         self.system_instruction = """
-        You are Agent A (The Profiler) for SmartCrop. Your job is to extract unstructured conversational 
+        You are Agent A (The Profiler) for FarmScheme. Your job is to extract unstructured conversational 
         data from farmers in Karnataka and normalize it into a strict JSON format.
         
         CRITICAL RULES:

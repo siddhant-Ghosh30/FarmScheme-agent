@@ -1,4 +1,3 @@
-# smartcrop-orchestrator/agents/matcher.py
 import json
 from typing import Dict, Any
 from tools.mcp_schemes import search_schemes

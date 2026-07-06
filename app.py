@@ -1,9 +1,8 @@
-# smartcrop-orchestrator/app.py
 from agent.profiler import ProfilerAgent
 from agent.matcher import MatcherAgent
 
 def run_pipeline(transcript: str):
-    print("--- Starting SmartCrop Orchestrator Pipeline ---")
+    print("--- Starting FarmScheme Pipeline ---")
     
     # 1. Initialize Agents
     profiler = ProfilerAgent()
