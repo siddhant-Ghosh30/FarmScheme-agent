@@ -43,6 +43,45 @@ We verified system boundaries using localized edge scenarios:
 - **Guardrail Pass (Scope Failure):** Industrial boundaries (e.g., `15 Acres of Sugarcane`) bypassed smallholder thresholds cleanly, displaying clear, auditable compliance failures instead of hallucinating approvals.
 
 ---
+## 4. Codebase Topography & Repository Structure
+
+To demonstrate production-grade modularity and fulfill the strict technical requirements of the Kaggle evaluation panel, the `farmscheme` repository completely isolates system layers into specialized domains. This structure prevents token bloat and keeps the client interface fully separated from our agent logic:
+
+farmscheme/
+├── .streamlit/
+│   └── secrets.toml          # Encapsulated API authentication context
+├── agents/
+│   ├── __init__.py
+│   ├── profiler.py           # Agent A: Gemini-Driven NLP Translation Layer
+│   └── matcher.py            # Agent B: IPC Stream Orchestrator
+├── tools/
+│   ├── __init__.py
+│   └── mcp_schemes.py        # Independent FastMCP Registry Server
+├── skills/
+│   └── SKILL.md              # Regional Localization Specification Engine
+├── requirements.txt          # Production cloud dependency boundaries
+└── app.py                    # Streamlit Reactive Frontend Pipeline 
+
+---
+## 5. Multi-Agent Class Implementations & Technical Contracts
+The internal operational mechanics of our decoupled architecture rely on strict separation of concerns between two primary agents:
+
+**Agent A:** The Conversational Profiler (agents/profiler.py)
+Role: Structural Entity Extraction & Metric Normalization.
+
+Engine: gemini-3.1-flash-lite with a strict response_schema bound to a type-safe Pydantic interface (FarmerProfile).
+
+Implementation Strategy: It intercepts messy, colloquial user inputs, strips out processing chatter, handles regional coordinate-to-acre calculations (e.g., converting local Gunthas to float Acres), and guarantees a predictable JSON payload format for downstream verification.
+
+**Agent B:** The Deterministic Matcher & MCP Server (agents/matcher.py)
+Role: Safe Orchestration & Algorithmic Guardrails.
+
+**Engine:** Native Python Asynchronous Runtime (asyncio) communicating over stdio IPC channels.
+
+**Implementation Strategy:** To eliminate the risk of compliance hallucinations, this agent completely isolates the system text weights from the business rules. It dynamically queries the localized host environment using sys.executable, fires up the internal FastMCP server process safely, passes along security tokens, and returns a fully traceable verification report based on real logical bounds.
+
+
+---
 
 ## References
 * [1] V. Hari Krishana and J. Deepak (2023) "Awareness of Farmers Towards Agricultural Schemes of Govt." *IJRPR* Vol (6), Issue (5).
