@@ -1,0 +1,13 @@
+Test Case Alpha: High-Fidelity Match
+Copy and paste this exact colloquial description into the farm text input box and click "Run Agentic Verification Loop":
+
+"I am farming out near Mandya. I have about 120 Gunthas of land left this cycle and I am putting down Paddy (Batta)."
+
+Expected Behavior: The status dropdown should initialize. Agent A will contact Gemini and output a clean JSON payload mapping land_size_acres: 3.0 (converting 120 Gunthas accurately) and crop_type: "Paddy". The MCP server should wake up, evaluate the payload, and return two active green subsidy containers matching both the PM-Kisan State Top-Up and the Raitha Vidya Nidhi eligibility conditions.
+
+3. Test Case Beta: Verification Failure (Out of Scope)
+Clear the input field and try testing bounds with an industrial crop scenario:
+
+"I run a large plantation layout in Chikmagalur with 15 acres of Sugarcane."
+
+Expected Behavior: Agent A will capture the metrics accurately (land_size_acres: 15.0, crop_type: "Sugarcane"). However, once Agent B executes the rule check against our database registry over the MCP channel, it will correctly output a strict red "Non-eligible / No active scheme matches found" box, proving that your pipeline protects users from compliance hallucinations.
