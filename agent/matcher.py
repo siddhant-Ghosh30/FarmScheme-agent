@@ -1,22 +1,27 @@
-# Open agents/matcher.py
 import os
 import json
 import asyncio
-import sys  # <--- MAKE SURE TO IMPORT SYS HERE
+import sys
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 class MatcherAgent:
+    """
+    Agent B: Sets up the secure background environment context, 
+    spawns the MCP connection loop, and runs the rule verification.
+    """
     def __init__(self, api_key: str):
         self.api_key = api_key
 
     async def _execute_mcp_query(self, crop: str, land: float) -> str:
+        # Securely pass down the credential layer to the tools environment context
         env_context = os.environ.copy()
         env_context["GEMINI_API_KEY"] = self.api_key
 
-        # CHANGE "python3" TO sys.executable TO FORCE IT TO USE THE SAME VENV
+        # 2. Force the background server execution to use Streamlit's active venv path
         server_params = StdioServerParameters(
-            command=sys.executable,  # this way 
+            command=sys.executable,  
             args=["tools/mcp_schemes.py"],
             env=env_context
         )
@@ -31,6 +36,7 @@ class MatcherAgent:
                 return response.content[0].text
 
     def evaluate_profile(self, crop: str, land: float) -> dict:
+        # Run the async server query within a synchronous call for the UI
         raw_response = asyncio.run(self._execute_mcp_query(crop, land))
         return json.loads(raw_response)
     
